@@ -20,8 +20,8 @@ public class CBPurchase: NSObject {
 
     var restoredPurchasesCount = 0
     private var activeProduct: CBProduct?
-    var customer: CBCustomer?
-    
+    public var customer: CBCustomer?
+
     var restoreResponseHandler: ((Result<[InAppSubscription], RestoreError>) -> Void)?
     var refreshHandler: RestoreResultCompletion<String>?
     var includeInActiveProducts = false
@@ -110,7 +110,7 @@ public extension CBPurchase {
             retrieveProducts()
         }
     }
-        
+
     func purchaseNonSubscriptionProduct(product: CBProduct, customer : CBCustomer? = nil ,productType : ProductType, completion handler: @escaping ((_ result: Result<NonSubscription, Error>) -> Void)) {
         buyNonSubscriptionProductHandler = handler
         activeProduct = product
@@ -118,7 +118,7 @@ public extension CBPurchase {
         self.customer = customer
         self.purchaseProductHandler(product: product, completion: handler)
     }
-    
+
     //Buy the product
     @available(*, deprecated, message: "This will be removed in upcoming versions, Please use this API func purchaseProduct(product: CBProduct, customer : CBCustomer? = nil, completion)")
     func purchaseProduct(product: CBProduct, customerId : String? = "",completion handler: @escaping ((_ result: Result<(status:Bool, subscriptionId:String?, planId:String?), Error>) -> Void)) {
@@ -127,28 +127,28 @@ public extension CBPurchase {
         self.customer = CBCustomer(customerID: customerId ?? "")
         self.purchaseProductHandler(product: product, completion: handler)
     }
-    
+
     func purchaseProduct(product: CBProduct, customer : CBCustomer? = nil, completion handler: @escaping ((_ result: Result<(status:Bool, subscriptionId:String?, planId:String?), Error>) -> Void)) {
         buyProductHandler = handler
         activeProduct = product
         self.customer = customer
         self.purchaseProductHandler(product: product, completion: handler)
     }
-    
+
     func restorePurchases(includeInActiveProducts:Bool = false ,completion handler: @escaping ((_ result: Result<[InAppSubscription], RestoreError>) -> Void)) {
         self.restoreResponseHandler = handler
         self.includeInActiveProducts = includeInActiveProducts
         self.restoredPurchasesCount = 0
         SKPaymentQueue.default().restoreCompletedTransactions()
     }
-    
+
     func purchaseProductHandler<T>(product: CBProduct,completion handler: @escaping ((_ result: Result<T, Error>) -> Void)) {
-        
+
         guard CBAuthenticationManager.isSDKKeyPresent() else {
             handler(.failure(CBPurchaseError.cannotMakePayments))
             return
         }
-        
+
         if !CBPurchase.shared.canMakePayments() {
             handler(.failure(CBPurchaseError.cannotMakePayments))
         } else {
@@ -156,7 +156,7 @@ public extension CBPurchase {
                 if status {
                     let payment = SKPayment(product: product.product)
                     SKPaymentQueue.default().add(payment)
-                    
+
                 } else {
                     handler(.failure(CBPurchaseError.invalidSDKKey))
                 }
@@ -279,17 +279,17 @@ extension CBPurchase: SKPaymentTransactionObserver {
 
 // chargebee methods
 public extension CBPurchase {
-    
+
     func validateReceiptForNonSubscriptions(_ product: CBProduct?,_ productType:
          ProductType?, completion: ((Result<NonSubscription, Error>) -> Void)?) {
         self.productType = productType
-        
+
         guard let receipt = getReceipt(product: product?.product) else {
             debugPrint("Couldn't read receipt data with error")
             completion?(.failure(CBError.defaultSytemError(statusCode: 0, message: "Could not read receipt data")))
             return
         }
-        
+
         CBReceiptValidationManager.validateReceiptForNonSubscriptions(receipt: receipt) {
             (receiptResult) in DispatchQueue.main.async {
                 switch receiptResult {
@@ -304,15 +304,15 @@ public extension CBPurchase {
             }
         }
     }
-    
+
     func validateReceipt(_ product: CBProduct?,completion: ((Result<(status:Bool, subscriptionId:String?, planId:String?), Error>) -> Void)?) {
-        
+
         guard let receipt = getReceipt(product: product?.product) else {
             debugPrint("Couldn't read receipt data with error")
             completion?(.failure(CBError.defaultSytemError(statusCode: 0, message: "Could not read receipt data")))
             return
         }
-        
+
         CBReceiptValidationManager.validateReceipt(receipt: receipt) {
             (receiptResult) in DispatchQueue.main.async {
                 switch receiptResult {
@@ -331,7 +331,7 @@ public extension CBPurchase {
             }
         }
     }
-    
+
     private func getReceipt(product: SKProduct?) -> CBReceipt? {
         var receipt: CBReceipt?
         guard let appStoreReceiptURL = Bundle.main.appStoreReceiptURL,
@@ -344,7 +344,7 @@ public extension CBPurchase {
         }
         do {
             let receiptData = try Data(contentsOf: appStoreReceiptURL, options: .alwaysMapped)
-            
+
             let receiptString = receiptData.base64EncodedString(options: [])
             debugPrint("Apple Purchase - success")
             receipt = CBReceipt(name: product.localizedTitle, token: receiptString, productID: product.productIdentifier, price: "\(product.price)", currencyCode: currencyCode, period: product.subscriptionPeriod?.numberOfUnits ?? 0, periodUnit: Int(product.subscriptionPeriod?.unit.rawValue ?? 0),customer: customer,productType: self.productType ?? .unknown)
@@ -352,7 +352,7 @@ public extension CBPurchase {
             print("Couldn't read receipt data with error: " + error.localizedDescription)
         }
         return receipt
-        
+
     }
 }
 
